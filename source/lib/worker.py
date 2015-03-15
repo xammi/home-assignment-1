@@ -97,3 +97,5 @@ def worker(config, parent_pid):
                 logger.exception(e)
     else:
         logger.info('Parent is dead. exiting')
+
+

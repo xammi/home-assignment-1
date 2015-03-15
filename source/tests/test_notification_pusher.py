@@ -6,18 +6,9 @@ import notification_pusher
 
 TEST_STRING = 'test'
 TEST_ID = 123
+EXIT_CODE = 123
 
 class NotificationPusherTestCase(unittest.TestCase):
-    def test_create_pidfile_example(self):
-        pid = 42
-        m_open = mock_open()
-        with patch('notification_pusher.open', m_open, create=True):
-            with patch('os.getpid', Mock(return_value=pid)):
-                create_pidfile('/file/path')
-
-        m_open.assert_called_once_with('/file/path', 'w')
-        m_open().write.assert_called_once_with(str(pid))
-
     def test_notification_worker(self):
         task = Mock()
         task.task_id = TEST_ID
@@ -138,6 +129,87 @@ class NotificationPusherTestCase(unittest.TestCase):
 
         assert done_with_processed_tasks.called_with(tarantool_queue)
 
+    def test_install_signal_handlers(self):
+        signal = Mock()
+        with patch('gevent.signal', signal):
+            install_signal_handlers()
+
+        assert signal.call_count == 4
+
+    def test_main_run_application_false(self):
+        notification_pusher.run_application = False
+        notification_pusher.exit_code = EXIT_CODE
+        args = ['description', '-c', '']
+
+        load_config_from_pyfile =  Mock(return_value=Mock())
+
+        with patch('notification_pusher.load_config_from_pyfile', load_config_from_pyfile):
+            with patch('notification_pusher.dictConfig'):
+                with patch('os.path.realpath'):
+                    with patch('os.path.expanduser'):
+                        result = main(args)
+
+        assert result == EXIT_CODE
+
+    def test_main_daemonize(self):
+        notification_pusher.run_application = False
+        notification_pusher.exit_code = EXIT_CODE
+        args = ['description', '-c', '', '-d']
+
+        load_config_from_pyfile =  Mock(return_value=Mock())
+        daemonize = Mock()
+
+        with patch('notification_pusher.daemonize', daemonize):
+            with patch('notification_pusher.load_config_from_pyfile', load_config_from_pyfile):
+                with patch('notification_pusher.dictConfig'):
+                    with patch('os.path.realpath'):
+                        with patch('os.path.expanduser'):
+                            result = main(args)
+
+        daemonize.assert_called_with()
+
+
+    def test_main_create_pidfile(self):
+        notification_pusher.run_application = False
+        notification_pusher.exit_code = EXIT_CODE
+        args = ['description', '-c', '', '-P', TEST_STRING,]
+
+
+        load_config_from_pyfile =  Mock(return_value=Mock())
+        create_pidfile = Mock()
+
+        with patch('notification_pusher.create_pidfile', create_pidfile):
+            with patch('notification_pusher.load_config_from_pyfile', load_config_from_pyfile):
+                with patch('notification_pusher.dictConfig'):
+                    with patch('os.path.realpath'):
+                        with patch('os.path.expanduser'):
+                            result = main(args)
+
+        create_pidfile.assert_called_with(TEST_STRING)
+
+    def test_main_run_application_true(self):
+        notification_pusher.run_application = True
+        notification_pusher.exit_code = EXIT_CODE
+        args = ['description', '-c', '']
+
+        load_config_from_pyfile =  Mock(return_value=Mock())
+        main_loop = Mock(side_effect=Exception)
+
+        def loop_break(arg):
+            notification_pusher.run_application = False
+
+        sleep = Mock(side_effect=loop_break)
+
+
+        with patch('notification_pusher.load_config_from_pyfile', load_config_from_pyfile):
+            with patch('notification_pusher.dictConfig'):
+                with patch('os.path.realpath'):
+                    with patch('os.path.expanduser'):
+                        with patch("notification_pusher.main_loop", main_loop):
+                            with patch('notification_pusher.sleep', sleep):
+                                result = main(args)
+
+        assert result == EXIT_CODE
 
 
 
