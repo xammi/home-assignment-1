@@ -9,12 +9,10 @@ TEST_TIMEOUT = 5
 class InitTestCase(unittest.TestCase):
 
     def test_to_unicode(self):
-        result = to_unicode(TEST_STRING)
-        assert result == TEST_STRING
+        assert to_unicode(TEST_STRING) == TEST_STRING
 
     def test_to_str(self):
-        result = to_str(TEST_STRING)
-        assert result == TEST_STRING
+        assert to_str(TEST_STRING) == TEST_STRING
 
     def test_get_counters(self):
         match = Mock(return_value=True)
@@ -82,6 +80,46 @@ class InitTestCase(unittest.TestCase):
                 result = get_url('', TEST_TIMEOUT)
 
         assert result == (MARKET_URL, 'meta_tag', TEST_STRING)
+
+    def test_get_redirect_history(self):
+        url = 'http://odnoklassniki.ru/'
+        result = get_redirect_history(url, TEST_TIMEOUT)
+        assert result == ([], [url], [])
+
+    def test_get_redirect_history_not_redirect(self):
+        url = TEST_STRING
+        get_url = Mock(return_value=(None, None, None))
+        with patch("lib.get_url", get_url):
+            result = get_redirect_history(url, TEST_TIMEOUT)
+
+        assert result == ([], [url], [])
+
+    def test_get_redirect_history_redirect_type_error(self):
+        url = TEST_STRING
+        get_url = Mock(return_value=(url, 'ERROR', None))
+        with patch("lib.get_url", get_url):
+            result = get_redirect_history(url, TEST_TIMEOUT)
+
+        assert result == (['ERROR'], [url, url], [])
+
+    def test_get_redirect_history_max_redirects(self):
+        url = TEST_STRING
+        get_url = Mock(return_value=(url, TEST_STRING, None))
+        with patch("lib.get_url", get_url):
+            result = get_redirect_history(url, TEST_TIMEOUT, 1)
+
+        assert result == ([TEST_STRING], [url, url], [])
+
+    def test_prepare_url(self):
+        assert prepare_url(None) == None
+
+    def test_prepare_url_uncide_error(self):
+        urlparse = Mock(return_value=('', u'.', '', '', '', ''))
+        with patch("lib.urlparse", urlparse):
+                result = prepare_url('')
+
+        assert result == '//.'
+
 
 
 
