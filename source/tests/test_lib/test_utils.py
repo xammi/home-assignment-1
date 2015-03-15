@@ -37,6 +37,36 @@ class UtilsTestCase(unittest.TestCase):
         fork.assert_called_with()
         _exit.assert_called_once_with(0)
 
+
+    def test_daemonize_oserror(self):
+
+        fork = Mock(side_effect=OSError)
+
+        with patch('os.fork', fork):
+            with self.assertRaises(Exception):
+                daemonize()
+
+    def test_daemonize_oserror2(self):
+        fork = Mock(side_effect=[0, OSError])
+
+        with patch('os.fork', fork):
+            with patch('os.setsid') as setsid:
+                with self.assertRaises(Exception):
+                    daemonize()
+
+
+    def test_daemonize_greater_zero(self):
+        fork = Mock(side_effect=[0, 1])
+
+        with patch('os.fork', fork):
+            with patch('os._exit') as _exit:
+                with patch('os.setsid') as setsid:
+                    daemonize()
+
+        assert_calls_amount(fork, 2)
+        setsid.assert_called_once_with()
+        assert_calls_amount(_exit, 1)
+
     def test_create_pidfile(self):
         pid = 42
         opener = mock_open()

@@ -25,6 +25,14 @@ class InitTestCase(unittest.TestCase):
 
         assert result == counters
 
+    def test_get_counters_false(self):
+        match = Mock(return_value=False)
+        with patch('re.match', match):
+            result = get_counters('')
+
+        counters = []
+        assert result == counters
+
     def test_check_for_meta(self):
         html = '<meta http-equiv="refresh" content="5; url=test">'
         result = check_for_meta(html, 'http://test.com/')
@@ -33,6 +41,16 @@ class InitTestCase(unittest.TestCase):
 
     def test_check_for_meta_none(self):
         html = '<meta http-equiv="refresh" content="5 url=test">'
+        result = check_for_meta(html, 'http://test.com/')
+        assert result == None
+
+    def test_check_for_meta_none_meta(self):
+        html = '<>'
+        result = check_for_meta(html, 'http://test.com/')
+        assert result == None
+
+    def test_check_for_meta_content_none(self):
+        html = '<meta http-equiv="refresh" content=";">'
         result = check_for_meta(html, 'http://test.com/')
         assert result == None
 
@@ -49,6 +67,16 @@ class InitTestCase(unittest.TestCase):
             content, redirect_url = make_pycurl_request('', 1000, 'mozilla')
 
         assert redirect_url == TEST_STRING
+
+    def test_make_pycurl_request_useragent_none(self):
+        curl = Mock()
+        curl.perform = Mock()
+        curl.getinfo.return_value = None
+
+        with patch('pycurl.Curl', Mock(return_value=curl)):
+            content, redirect_url = make_pycurl_request('', 1000)
+
+        assert redirect_url == None
 
     def test_get_url(self):
         make_pycurl_request = Mock(return_value=(TEST_STRING, TEST_STRING))
@@ -80,6 +108,15 @@ class InitTestCase(unittest.TestCase):
                 result = get_url('', TEST_TIMEOUT)
 
         assert result == (MARKET_URL, 'meta_tag', TEST_STRING)
+
+    def test_get_url_new_redirect_url_none(self):
+        make_pycurl_request = Mock(return_value=(TEST_STRING, None))
+        check_for_meta = Mock(return_value=None)
+        with patch("lib.make_pycurl_request", make_pycurl_request):
+            with patch("lib.check_for_meta", check_for_meta):
+                result = get_url('', TEST_TIMEOUT)
+
+        assert result == (None, None, TEST_STRING)
 
     def test_get_redirect_history(self):
         url = 'http://odnoklassniki.ru/'
