@@ -19,6 +19,7 @@ from gevent.pool import Pool
 import requests
 import tarantool
 import tarantool_queue
+from lib.utils import parse_cmd_args, daemonize
 
 SIGNAL_EXIT_CODE_OFFSET = 128
 """Коды выхода рассчитываются как 128 + номер сигнала"""
@@ -179,65 +180,6 @@ def main_loop(config):
         sleep(config.SLEEP)
     else:
         logger.info('Stop application loop.')
-
-
-def parse_cmd_args(args):
-    """
-    Разбирает аргументы командной строки.
-
-    :param args: список аргументов
-    :type args: list
-
-    :rtype: argparse.Namespace
-    """
-    parser = argparse.ArgumentParser(
-        description='Push notifications daemon.'
-    )
-    parser.add_argument(
-        '-c',
-        '--config',
-        dest='config',
-        required=True,
-        help='Path to configuration file.'
-    )
-    parser.add_argument(
-        '-d',
-        '--daemon',
-        dest='daemon',
-        action='store_true',
-        help='Daemonize process.'
-    )
-    parser.add_argument(
-        '-P',
-        '--pid',
-        dest='pidfile',
-        help='Path to pidfile.'
-    )
-
-    return parser.parse_args(args=args)
-
-
-def daemonize():
-    """
-    Демонизирует текущий процесс.
-    """
-    try:
-        pid = os.fork()
-    except OSError as exc:
-        raise Exception("%s [%d]" % (exc.strerror, exc.errno))
-
-    if pid == 0:
-        os.setsid()
-
-        try:
-            pid = os.fork()
-        except OSError as exc:
-            raise Exception("%s [%d]" % (exc.strerror, exc.errno))
-
-        if pid > 0:
-            os._exit(0)
-    else:
-        os._exit(0)
 
 
 class Config(object):

@@ -89,7 +89,9 @@ class NotificationPusherTestCase(unittest.TestCase):
         assert notification_pusher.run_application == False
         assert notification_pusher.exit_code == signum + SIGNAL_EXIT_CODE_OFFSET
 
-    def test_main_loop(self):
+    def test_main_looprun_application_false(self):
+        notification_pusher.run_application = False
+
         config = Mock()
         config.QUEUE_TUBE = TEST_STRING
         config.WORKER_POOL_SIZE = 1
@@ -99,8 +101,6 @@ class NotificationPusherTestCase(unittest.TestCase):
         tarantool_queue = Mock(return_value=queue)
         pool = Mock(return_value=worker_pool)
 
-        notification_pusher.run_application = False
-
         with patch('notification_pusher.tarantool_queue.Queue', tarantool_queue):
             with patch('notification_pusher.Pool', pool):
                 main_loop(config)
@@ -109,6 +109,37 @@ class NotificationPusherTestCase(unittest.TestCase):
         pool.assert_called_with(config.WORKER_POOL_SIZE)
 
         assert worker_pool.free_count.call_count == 0
+
+    def test_main_loop_run_application_true(self):
+        notification_pusher.run_application = True
+
+        config = Mock()
+        config.QUEUE_TUBE = TEST_STRING
+        config.WORKER_POOL_SIZE = 1
+
+        tube = Mock()
+        queue = Mock()
+        queue.tube.return_value = tube
+        tube.take.return_value = Mock()
+
+        worker_pool = Mock()
+        worker_pool.free_count.return_value = 2
+
+        tarantool_queue = Mock(return_value=queue)
+        done_with_processed_tasks = Mock()
+
+        with patch('notification_pusher.tarantool_queue.Queue', tarantool_queue):
+            with patch('notification_pusher.Pool', Mock(return_value=worker_pool)):
+                with patch('notification_pusher.Greenlet', Mock(return_value=Mock())):
+                    with patch('notification_pusher.done_with_processed_tasks', done_with_processed_tasks):
+                        with patch("notification_pusher.sleep", Mock(side_effect=KeyboardInterrupt)):
+                            with self.assertRaises(KeyboardInterrupt):
+                                main_loop(config)
+
+        assert done_with_processed_tasks.called_with(tarantool_queue)
+
+
+
 
 
 
