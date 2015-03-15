@@ -2,7 +2,7 @@ __author__ = 'max'
 
 import unittest
 from mock import Mock, patch
-from lib.utils import daemonize
+from lib.utils import daemonize, create_pidfile
 
 
 def assert_calls_amount(mock_obj, cnt):
@@ -37,3 +37,6 @@ class UtilsTestCase(unittest.TestCase):
 
         assert_calls_amount(fork, 1)
         _exit.assert_called_once_with(0)
+
+    def test_create_pidfile(self):
+        create_pidfile("test_pidfile")
