@@ -1,5 +1,5 @@
 import unittest
-from mock import Mock, MagicMock, patch
+from mock import Mock, patch
 from lib import *
 
 TEST_STRING = 'test'
@@ -41,7 +41,7 @@ class InitTestCase(unittest.TestCase):
         assert result == MARKET_URL + '_my_app'
 
     def test_make_pycurl_request(self):
-        curl = MagicMock()
+        curl = Mock()
         curl.perform = Mock()
         curl.getinfo.return_value = TEST_STRING
 
