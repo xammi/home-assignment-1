@@ -52,12 +52,14 @@ class UtilsTestCase(unittest.TestCase):
         filepath = '/test'
 
         def execfile(filepath, variables):
-            local_variables = {'A': 42, 'bcd': 42}
+            variables['UPPER_CASE'] = 42
+            variables['lower_case'] = 42
 
-        with patch('__builtin__.execfile', execfile):
+        with patch('__builtin__.execfile', side_effect=execfile):
             cfg = load_config_from_pyfile(filepath)
 
-        # self.assertEqual(cfg.A, 23)
+        self.assertEqual(cfg.UPPER_CASE, 42)
+        self.assertEqual(hasattr(cfg, 'lower_case'), False)
 
     def test_parse_cmd_args_pid(self):
         cfg = '/test'
