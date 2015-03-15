@@ -1,8 +1,11 @@
 __author__ = 'max'
 
 import unittest
-from mock import Mock, patch, mock_open
-from lib.utils import daemonize, create_pidfile, load_config_from_pyfile, parse_cmd_args
+from mock import Mock, patch, mock_open, call
+from lib.utils import daemonize, create_pidfile, load_config_from_pyfile, parse_cmd_args, \
+    get_tube, spawn_workers, check_network_status
+from tarantool_queue import tarantool_queue
+from multiprocessing import Process
 
 
 def assert_calls_amount(mock_obj, cnt):
@@ -13,29 +16,25 @@ def assert_calls_amount(mock_obj, cnt):
 class UtilsTestCase(unittest.TestCase):
     def test_daemonize_zero(self):
         fork = Mock(return_value=0)
-        setsid = Mock()
-        _exit = Mock()
 
         with patch('os.fork', fork):
-            with patch('os._exit', _exit):
-                with patch('os.setsid', setsid):
+            with patch('os._exit') as _exit:
+                with patch('os.setsid') as setsid:
                     daemonize()
 
         assert_calls_amount(fork, 2)
-        assert_calls_amount(setsid, 1)
+        setsid.assert_called_once_with()
         assert_calls_amount(_exit, 0)
 
     def test_daemonize_exit(self):
         fork = Mock(return_value=1)
-        setsid = Mock()
-        _exit = Mock()
 
         with patch('os.fork', fork):
-            with patch('os._exit', _exit):
-                with patch('os.setsid', setsid):
+            with patch('os._exit') as _exit:
+                with patch('os.setsid'):
                     daemonize()
 
-        assert_calls_amount(fork, 1)
+        fork.assert_called_with()
         _exit.assert_called_once_with(0)
 
     def test_create_pidfile(self):
@@ -52,14 +51,12 @@ class UtilsTestCase(unittest.TestCase):
     def test_load_config_from_pyfile(self):
         filepath = '/test'
 
-        def execfile_wrapper(filepath, variables):
-            local_variables = {'A': 23}
+        def execfile(filepath, variables):
+            local_variables = {'A': 42, 'bcd': 42}
 
-        execfile = Mock(wraps=execfile_wrapper)
         with patch('__builtin__.execfile', execfile):
             cfg = load_config_from_pyfile(filepath)
 
-        execfile.assert_called_once_with('/test', {})
         # self.assertEqual(cfg.A, 23)
 
     def test_parse_cmd_args_pid(self):
@@ -77,3 +74,42 @@ class UtilsTestCase(unittest.TestCase):
         self.assertEqual(parsed_args.daemon, True)
         self.assertEqual(parsed_args.config, cfg)
         self.assertEqual(parsed_args.pidfile, pidfile)
+
+    def test_get_tube(self):
+        name = 'name'
+        port = space = 42
+
+        with patch.object(tarantool_queue.Queue, 'tube') as mock_queue:
+            get_tube('host', port, space, name)
+
+        mock_queue.assert_called_once_with(name)
+
+    def test_spawn_workers(self):
+        num = 42
+        parent_pid = 1
+        args = []
+
+        with patch.object(Process, 'start') as mock_process:
+            spawn_workers(num, 'target', args, parent_pid)
+
+        calls = [call() for _ in range(0, num)]
+        mock_process.assert_has_calls(calls)
+
+    def test_check_network_status_error(self):
+        check_url = 'http://ya.ru'
+        timeout = 42
+        mock_urlopen = Mock(side_effect=ValueError)
+
+        with patch('urllib2.urlopen', mock_urlopen):
+            result = check_network_status(check_url, timeout)
+
+        self.assertEqual(result, False)
+
+    def test_check_network_status(self):
+        check_url = 'http://ya.ru'
+        timeout = 42
+
+        with patch('urllib2.urlopen') as mock_urlopen:
+            result = check_network_status(check_url, timeout)
+
+        mock_urlopen.assertEqual(result, True)

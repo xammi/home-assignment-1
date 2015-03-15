@@ -19,7 +19,7 @@ class RedirectCheckerTestCase(unittest.TestCase):
                         main_loop(config)
 
         spawner_calls = spawner.mock_calls
-        assert len(spawner_calls) == 1
+        self.assertEqual(len(spawner_calls), 1)
 
     def test_main_loop_network_ok_without_spawn(self):
         config = Mock(WORKER_POOL_SIZE=0, SLEEP=0)
@@ -32,7 +32,7 @@ class RedirectCheckerTestCase(unittest.TestCase):
                         main_loop(config)
 
         spawner_calls = spawner.mock_calls
-        assert len(spawner_calls) == 0
+        self.assertEqual(len(spawner_calls), 0)
 
     def test_main_loop_network_down(self):
         config = Mock(WORKER_POOL_SIZE=0, SLEEP=0)
