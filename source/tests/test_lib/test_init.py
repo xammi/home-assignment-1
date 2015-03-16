@@ -9,7 +9,7 @@ TEST_TIMEOUT = 5
 class InitTestCase(unittest.TestCase):
 
     def test_to_unicode(self):
-        assert to_unicode(TEST_STRING) == TEST_STRING
+        assert to_unicode('test') == u'test'
 
     def test_to_str(self):
         assert to_str(TEST_STRING) == TEST_STRING
