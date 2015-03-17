@@ -12,10 +12,15 @@ TEST_TIMEOUT = 5
 class InitTestCase(unittest.TestCase):
 
     def test_to_unicode(self):
-        assert to_unicode(TEST_STRING.decode('utf-8')) == 'test'
+        result = to_unicode('test')
+        assert result == u'test'
+        assert isinstance(result, unicode)
 
     def test_to_str(self):
-        assert to_str(TEST_STRING.encode('utf-8')) == TEST_STRING
+        result = to_str(u'test')
+	assert result == 'test'
+        assert isinstance(result, str)
+
 
     def test_get_counters(self):
         match = Mock(return_value=True)
