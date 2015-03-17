@@ -83,27 +83,29 @@ class UtilsTestCase(unittest.TestCase):
 
         def execfile(filepath, variables):
             variables['UPPER_CASE'] = 42
-            variables['lower_case'] = 42
+            variables['lower_case'] = 1
 
         with patch('__builtin__.execfile', side_effect=execfile):
             cfg = load_config_from_pyfile(filepath)
 
         self.assertEqual(cfg.UPPER_CASE, 42)
-        self.assertEqual(hasattr(cfg, 'lower_case'), False)
+        self.assertFalse(hasattr(cfg, 'lower_case'))
 
     def test_parse_cmd_args_pid(self):
         cfg = '/test'
         pid = '/pid'
         args = parse_cmd_args(['-c', cfg, '-P', pid], 'test')
-        self.assertTrue(args.config == cfg)
-        self.assertTrue(args.pidfile == pid)
+
+        self.assertEqual(args.config, cfg)
+        self.assertEqual(args.pidfile, pid)
         self.assertFalse(args.daemon)
 
     def test_parse_cmd_pidfile(self):
         cfg = '/conf'
         pidfile = '/pidfile'
         parsed_args = parse_cmd_args(['-c', cfg, '-P', pidfile, '-d'])
-        self.assertEqual(parsed_args.daemon, True)
+
+        self.assertTrue(parsed_args.daemon)
         self.assertEqual(parsed_args.config, cfg)
         self.assertEqual(parsed_args.pidfile, pidfile)
 
@@ -135,7 +137,7 @@ class UtilsTestCase(unittest.TestCase):
         with patch('urllib2.urlopen', mock_urlopen):
             result = check_network_status(check_url, timeout)
 
-        self.assertEqual(result, False)
+        self.assertFalse(result)
 
     def test_check_network_status(self):
         check_url = 'http://ya.ru'
@@ -144,4 +146,4 @@ class UtilsTestCase(unittest.TestCase):
         with patch('urllib2.urlopen') as mock_urlopen:
             result = check_network_status(check_url, timeout)
 
-        mock_urlopen.assertEqual(result, True)
+        mock_urlopen.assertTrue(result)
