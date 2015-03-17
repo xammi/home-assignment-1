@@ -61,7 +61,7 @@ class NotificationPusherTestCase(unittest.TestCase):
             with patch('notification_pusher.logger', logger):
                 done_with_processed_tasks(task_queue)
 
-        assert logger.exception.called is True
+        assert logger.exception.called
 
     def test_done_with_processed_tasks_exception_queue_empty(selft):
         task_queue = Mock()

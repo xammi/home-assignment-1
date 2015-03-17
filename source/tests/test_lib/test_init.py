@@ -66,6 +66,10 @@ class InitTestCase(unittest.TestCase):
         result = fix_market_url('market://_my_app')
         assert result == MARKET_URL + '_my_app'
 
+    def test_fix_market_url_fake(self):
+        result = fix_market_url('_my_app')
+        assert result == MARKET_URL + '_my_app'
+
     def test_make_pycurl_request(self):
         curl = Mock()
         curl.perform = Mock()
@@ -176,7 +180,7 @@ class InitTestCase(unittest.TestCase):
         assert prepare_url(url) == 'http://sdf.example.com/dir%202/?name=123'
 
     def test_prepare_url_none(self):
-        assert prepare_url(None) == None
+        assert prepare_url(None) is None
 
     def test_prepare_url_uncide_error(self):
         urlparse = Mock(return_value=('', u'.', '', '', '', ''))
