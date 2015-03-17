@@ -1,5 +1,5 @@
 import unittest
-from mock import Mock, patch, mock_open
+from mock import MagicMock, Mock, patch, mock_open
 from notification_pusher import *
 import notification_pusher
 
@@ -9,6 +9,10 @@ TEST_ID = 123
 EXIT_CODE = 123
 
 class NotificationPusherTestCase(unittest.TestCase):
+
+    def loop_break(arg1, arg2):
+        notification_pusher.run_application = False
+
     def test_notification_worker(self):
         task = Mock()
         task.task_id = TEST_ID
@@ -57,7 +61,7 @@ class NotificationPusherTestCase(unittest.TestCase):
             with patch('notification_pusher.logger', logger):
                 done_with_processed_tasks(task_queue)
 
-        assert logger.exception.called == True
+        assert logger.exception.called is True
 
     def test_done_with_processed_tasks_exception_queue_empty(selft):
         task_queue = Mock()
@@ -104,9 +108,10 @@ class NotificationPusherTestCase(unittest.TestCase):
     def test_main_loop_run_application_true(self):
         notification_pusher.run_application = True
 
-        config = Mock()
+        config = MagicMock()
         config.QUEUE_TUBE = TEST_STRING
         config.WORKER_POOL_SIZE = 1
+        config.SLEEP.return_value = float(0.001)
 
         tube = Mock()
         queue = Mock()
@@ -117,15 +122,14 @@ class NotificationPusherTestCase(unittest.TestCase):
         worker_pool.free_count.return_value = 2
 
         tarantool_queue = Mock(return_value=queue)
-        done_with_processed_tasks = Mock()
+
+        done_with_processed_tasks = Mock(side_effect=self.loop_break)
 
         with patch('notification_pusher.tarantool_queue.Queue', tarantool_queue):
             with patch('notification_pusher.Pool', Mock(return_value=worker_pool)):
                 with patch('notification_pusher.Greenlet', Mock(return_value=Mock())):
                     with patch('notification_pusher.done_with_processed_tasks', done_with_processed_tasks):
-                        with patch("notification_pusher.sleep", Mock(side_effect=KeyboardInterrupt)):
-                            with self.assertRaises(KeyboardInterrupt):
-                                main_loop(config)
+                        main_loop(config)
 
         assert done_with_processed_tasks.called_with(tarantool_queue)
 
@@ -154,7 +158,7 @@ class NotificationPusherTestCase(unittest.TestCase):
     def test_main_daemonize(self):
         notification_pusher.run_application = False
         notification_pusher.exit_code = EXIT_CODE
-        args = ['description', '-c', '', '-d']
+        args = ['description', '-c', '/conf', '-d']
 
         load_config_from_pyfile =  Mock(return_value=Mock())
         daemonize = Mock()
@@ -162,9 +166,7 @@ class NotificationPusherTestCase(unittest.TestCase):
         with patch('notification_pusher.daemonize', daemonize):
             with patch('notification_pusher.load_config_from_pyfile', load_config_from_pyfile):
                 with patch('notification_pusher.dictConfig'):
-                    with patch('os.path.realpath'):
-                        with patch('os.path.expanduser'):
-                            result = main(args)
+                    main(args)
 
         daemonize.assert_called_with()
 
@@ -172,7 +174,7 @@ class NotificationPusherTestCase(unittest.TestCase):
     def test_main_create_pidfile(self):
         notification_pusher.run_application = False
         notification_pusher.exit_code = EXIT_CODE
-        args = ['description', '-c', '', '-P', TEST_STRING,]
+        args = ['description', '-c', '/conf', '-P', TEST_STRING,]
 
 
         load_config_from_pyfile =  Mock(return_value=Mock())
@@ -181,35 +183,30 @@ class NotificationPusherTestCase(unittest.TestCase):
         with patch('notification_pusher.create_pidfile', create_pidfile):
             with patch('notification_pusher.load_config_from_pyfile', load_config_from_pyfile):
                 with patch('notification_pusher.dictConfig'):
-                    with patch('os.path.realpath'):
-                        with patch('os.path.expanduser'):
-                            result = main(args)
+                    main(args)
 
         create_pidfile.assert_called_with(TEST_STRING)
 
     def test_main_run_application_true(self):
         notification_pusher.run_application = True
         notification_pusher.exit_code = EXIT_CODE
-        args = ['description', '-c', '']
+        args = ['description', '-c', '/conf']
 
         load_config_from_pyfile =  Mock(return_value=Mock())
         main_loop = Mock(side_effect=Exception)
 
-        def loop_break(arg):
-            notification_pusher.run_application = False
-
-        sleep = Mock(side_effect=loop_break)
+        sleep = Mock(side_effect=self.loop_break)
 
 
         with patch('notification_pusher.load_config_from_pyfile', load_config_from_pyfile):
             with patch('notification_pusher.dictConfig'):
-                with patch('os.path.realpath'):
-                    with patch('os.path.expanduser'):
-                        with patch("notification_pusher.main_loop", main_loop):
-                            with patch('notification_pusher.sleep', sleep):
-                                result = main(args)
+               with patch("notification_pusher.main_loop", main_loop):
+                    with patch('notification_pusher.sleep', sleep):
+                        result = main(args)
 
         assert result == EXIT_CODE
+
+
 
 
 

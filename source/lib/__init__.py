@@ -188,6 +188,7 @@ def prepare_url(url):
         to_unicode(url),
         allow_fragments=False
     )
+
     try:
         netloc = netloc.encode('idna')
     except UnicodeError:

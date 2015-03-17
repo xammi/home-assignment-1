@@ -90,7 +90,7 @@ class WorkerTestCase(unittest.TestCase):
                 with patch('lib.worker.os.path.exists',  path_exists):
                     worker(config, TEST_ID)
 
-        task.ack.assert_called_one_with()
+        task.ack.assert_called_with()
 
     def test_worker_task_none(self):
         config = Mock()
@@ -103,7 +103,7 @@ class WorkerTestCase(unittest.TestCase):
                 with patch('lib.worker.os.path.exists', path_exists):
                     worker(config, TEST_ID)
 
-        path_exists.assert_called_one_with(TEST_ID)
+        path_exists.assert_called_with('/proc/' + TEST_ID)
 
     def test_worker_result_none(self):
         config = Mock()
@@ -119,7 +119,7 @@ class WorkerTestCase(unittest.TestCase):
                 with patch('lib.worker.os.path.exists',  path_exists):
                     worker(config, TEST_ID)
 
-        task.ack.assert_called_one_with()
+        task.ack.assert_called_with()
 
     def test_worker_is_input_none(self):
         config = Mock()
@@ -135,7 +135,7 @@ class WorkerTestCase(unittest.TestCase):
                 with patch('lib.worker.os.path.exists',  path_exists):
                     worker(config, TEST_ID)
 
-        task.ack.assert_called_one_with()
+        task.ack.assert_called_with()
 
     def test_worker_exception(self):
         config = Mock()
@@ -154,4 +154,4 @@ class WorkerTestCase(unittest.TestCase):
                     with patch('lib.worker.logger', logger):
                             worker(config, TEST_ID)
 
-        logger.eexception.assert_called_one_with()
+        assert logger.exception.call_count == 1
