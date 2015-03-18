@@ -146,4 +146,4 @@ class UtilsTestCase(unittest.TestCase):
         with patch('urllib2.urlopen') as mock_urlopen:
             result = check_network_status(check_url, timeout)
 
-        mock_urlopen.assertTrue(result)
+        self.assertTrue(result)
