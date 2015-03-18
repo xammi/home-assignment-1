@@ -2,6 +2,7 @@ import unittest
 from mock import MagicMock, Mock, patch, mock_open
 from notification_pusher import *
 import notification_pusher
+import json
 
 
 TEST_STRING = 'test'
@@ -38,6 +39,20 @@ class NotificationPusherTestCase(unittest.TestCase):
             notification_worker(task, task_queue)
 
         task_queue.put.assert_called_with((task, 'bury'))
+
+    def test_notification_woker_requests_post(self):
+        task = Mock()
+        task.task_id = TEST_ID
+        task.data = {"callback_url": TEST_STRING}
+
+        post = Mock(return_value=Mock())
+        task_queue = Mock()
+
+        with patch('requests.post', post):
+            notification_worker(task, task_queue)
+
+        post.assert_called_with(TEST_STRING, data='{\"id\": 123}')
+
 
     def test_done_with_processed_tasks(selft):
         task_queue = Mock()
