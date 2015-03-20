@@ -18,14 +18,20 @@ class InitTestCase(unittest.TestCase):
 
     def test_to_str(self):
         result = to_str(u'test')
-	assert result == 'test'
+        assert result == 'test'
         assert isinstance(result, str)
 
-
     def test_get_counters(self):
-        match = Mock(return_value=True)
-        with patch('re.match', match):
-            result = get_counters('')
+        content = ("google-analytics.com/ga.js"
+                   "mc.yandex.ru/metrika/watch.js"
+                   "top-fwz1.mail.ru/counter"
+                   "top.mail.ru/jump?from"
+                   "//googleads.g.doubleclick.net/pagead/viewthroughconversion"
+                   "//a1.vdna-assets.com/analytics.js"
+                   "/counter.yadro.ru/hit"
+                   "counter.rambler.ru/top100")
+
+        result = get_counters(content)
 
         counters = []
         for counter_name, regexp in COUNTER_TYPES:
@@ -34,10 +40,7 @@ class InitTestCase(unittest.TestCase):
         assert result == counters
 
     def test_get_counters_false(self):
-        match = Mock(return_value=False)
-        with patch('re.match', match):
-            result = get_counters('')
-
+        result = get_counters('')
         counters = []
         assert result == counters
 
@@ -76,8 +79,9 @@ class InitTestCase(unittest.TestCase):
         curl.getinfo.return_value = TEST_STRING
 
         with patch('pycurl.Curl', Mock(return_value=curl)):
-            content, redirect_url = make_pycurl_request('', 1000, 'mozilla')
+            content, redirect_url = make_pycurl_request('', TEST_TIMEOUT)
 
+        curl.getinfo.assert_called_with(curl.REDIRECT_URL)
         assert redirect_url == TEST_STRING
 
     def test_make_pycurl_request_useragent_none(self):
@@ -86,18 +90,21 @@ class InitTestCase(unittest.TestCase):
         curl.getinfo.return_value = TEST_STRING
 
         with patch('pycurl.Curl', Mock(return_value=curl)):
-            content, redirect_url = make_pycurl_request('', 1000)
+            content, redirect_url = make_pycurl_request('', TEST_TIMEOUT)
 
+        curl.setopt.assert_any_call(curl.TIMEOUT, TEST_TIMEOUT)
         assert redirect_url == TEST_STRING
 
     def test_make_pycurl_request_cur_getinfo_none(self):
         curl = Mock()
         curl.perform = Mock()
         curl.getinfo.return_value = None
+        useragent = 'mozilla'
 
         with patch('pycurl.Curl', Mock(return_value=curl)):
-            content, redirect_url = make_pycurl_request('', 1000, 'mozilla')
+            content, redirect_url = make_pycurl_request('', TEST_TIMEOUT, useragent)
 
+        curl.setopt.assert_any_call(curl.USERAGENT, useragent)
         assert redirect_url is None
 
     def test_get_url(self):
@@ -162,11 +169,13 @@ class InitTestCase(unittest.TestCase):
         assert result == (['ERROR'], [url, url], [])
 
     def test_get_redirect_history_max_redirects(self):
-        get_url = Mock(return_value=(TEST_URL, TEST_REDIRECT_URL, None))
+        get_url = Mock(side_effect=[('url1', 'url2', None),
+                                    ('url3', 'url4', None),
+                                    ('url5', 'url6', None)])
         with patch("lib.get_url", get_url):
-            result = get_redirect_history(TEST_URL, TEST_TIMEOUT, 1)
+            result = get_redirect_history(TEST_URL, TEST_TIMEOUT, 2)
 
-        assert result == ([TEST_REDIRECT_URL], [TEST_URL, TEST_URL], [])
+        assert result == (['url2', 'url4'], ['url', 'url1', 'url3'], [])
 
     def test_get_redirect_history_counters(self):
         content = 'test mc.yandex.ru/metrika/watch.js test'

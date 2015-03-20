@@ -1,8 +1,8 @@
 import unittest
-from mock import MagicMock, Mock, patch, mock_open
+from mock import MagicMock, Mock, patch, mock_open, PropertyMock
 from notification_pusher import *
 import notification_pusher
-import json
+
 
 
 TEST_STRING = 'test'
@@ -36,7 +36,8 @@ class NotificationPusherTestCase(unittest.TestCase):
         task_queue = Mock()
 
         with patch('requests.post', post):
-            notification_worker(task, task_queue)
+            with patch('notification_pusher.logger', Mock()):
+                notification_worker(task, task_queue)
 
         task_queue.put.assert_called_with((task, 'bury'))
 
@@ -123,10 +124,7 @@ class NotificationPusherTestCase(unittest.TestCase):
     def test_main_loop_run_application_true(self):
         notification_pusher.run_application = True
 
-        config = MagicMock()
-        config.QUEUE_TUBE = TEST_STRING
-        config.WORKER_POOL_SIZE = 1
-        config.SLEEP.return_value = float(0.001)
+        config = Mock(SLEEP=0.0)
 
         tube = Mock()
         queue = Mock()
@@ -214,7 +212,7 @@ class NotificationPusherTestCase(unittest.TestCase):
 
 
         with patch('notification_pusher.load_config_from_pyfile', load_config_from_pyfile):
-            with patch('notification_pusher.dictConfig'):
+            with patch('notification_pusher.dictConfig'), patch('notification_pusher.logger'):
                with patch("notification_pusher.main_loop", main_loop):
                     with patch('notification_pusher.sleep', sleep):
                         result = main(args)
